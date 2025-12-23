@@ -291,7 +291,7 @@
             </div>
             <div class="summary-cards">
                 <div class="summary-card">
-                    <div class="label" id="labelTotalInvested">Total Investido aos 65 anos</div>
+                    <div class="label" id="labelTotalInvested">Total Aportado aos 65 anos</div>
                     <div class="value" id="totalInvested">R$ 0</div>
                 </div>
                 <div class="summary-card" id="cardWithdrawal">
@@ -341,6 +341,13 @@
                     <label for="monthlyInvestment">Investimento Mensal (Aporte)</label>
                     <div class="input-prefix">
                         <input type="number" id="monthlyInvestment" value="5000" min="0" step="100">
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="initialBalance">Patrimônio Inicial</label>
+                    <div class="input-prefix">
+                        <input type="number" id="initialBalance" value="0" min="0" step="1000">
                     </div>
                 </div>
             </div>
@@ -409,6 +416,7 @@
                 retirementAge: document.getElementById('retirementAge').value,
                 desiredIncome: document.getElementById('desiredIncome').value,
                 monthlyInvestment: document.getElementById('monthlyInvestment').value,
+                initialBalance: document.getElementById('initialBalance').value,
                 inflationRate: document.getElementById('inflationRate').value,
                 annualReturn: document.getElementById('annualReturn').value,
                 withdrawalRate: document.getElementById('withdrawalRate').value,
@@ -429,6 +437,7 @@
                 document.getElementById('retirementAge').value = config.retirementAge;
                 document.getElementById('desiredIncome').value = config.desiredIncome;
                 document.getElementById('monthlyInvestment').value = config.monthlyInvestment;
+                document.getElementById('initialBalance').value = config.initialBalance || 0;
                 document.getElementById('inflationRate').value = config.inflationRate;
                 document.getElementById('annualReturn').value = config.annualReturn;
                 document.getElementById('withdrawalRate').value = config.withdrawalRate;
@@ -468,6 +477,7 @@
             const currentAge = parseInt(document.getElementById('currentAge').value) || 25;
             const retirementAge = parseInt(document.getElementById('retirementAge').value) || 65;
             const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value) || 0;
+            const initialBalance = parseFloat(document.getElementById('initialBalance').value) || 0;
             const annualReturn = parseFloat(document.getElementById('annualReturn').value) / 100 || 0;
             const inflation = parseFloat(document.getElementById('inflationRate').value) / 100 || 0;
             const withdrawalRate = parseFloat(document.getElementById('withdrawalRate').value) / 100 || 0;
@@ -489,7 +499,7 @@
             const balanceData = [];
             const investedData = [];
 
-            let balance = 0;
+            let balance = initialBalance;
             let totalInvested = 0;
             let balanceAtRetirement = 0;
 
@@ -498,7 +508,7 @@
                 labels.push(currentAge + year);
 
                 if (year === 0) {
-                    balanceData.push(0);
+                    balanceData.push(initialBalance);
                     investedData.push(0);
                 } else {
                     // Calcular 12 meses de aportes e rendimentos com taxa real
@@ -546,7 +556,7 @@
             const desiredIncome = parseFloat(document.getElementById('desiredIncome').value) || 0;
 
             // Atualizar labels dos cards com a idade de aposentadoria
-            document.getElementById('labelTotalInvested').textContent = `Total Investido aos ${retirementAge} anos`;
+            document.getElementById('labelTotalInvested').textContent = `Total Aportado aos ${retirementAge} anos`;
             document.getElementById('labelFinalBalance').textContent = `Patrimônio Final aos ${retirementAge} anos`;
 
             // Atualizar valores dos cards
