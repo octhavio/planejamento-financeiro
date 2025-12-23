@@ -264,6 +264,32 @@
             color: #00ff88;
         }
 
+        .chart-options {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .chart-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #888;
+            cursor: pointer;
+        }
+
+        .chart-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #ffa500;
+            cursor: pointer;
+        }
+
+        .chart-option:hover {
+            color: #ccc;
+        }
+
         /* Responsividade */
         @media (max-width: 1024px) {
             .container {
@@ -286,6 +312,12 @@
         <div class="chart-section">
             <h2>📈 Projeção de Patrimônio Real (descontando inflação)</h2>
             <div class="saved-info" id="savedInfo"></div>
+            <div class="chart-options">
+                <label class="chart-option">
+                    <input type="checkbox" id="showNominal" onchange="calculateProjection()">
+                    Mostrar Patrimônio Nominal
+                </label>
+            </div>
             <div class="chart-container">
                 <canvas id="investmentChart"></canvas>
             </div>
@@ -494,12 +526,15 @@
             // Usar rentabilidade REAL (já descontando inflação)
             const realRate = annualReturn - inflation;
             const monthlyRealRate = realRate / 12;
+            const monthlyNominalRate = annualReturn / 12;
 
             const labels = [];
             const balanceData = [];
+            const nominalData = [];
             const investedData = [];
 
             let balance = initialBalance;
+            let nominalBalance = initialBalance;
             let totalInvested = 0;
             let balanceAtRetirement = 0;
 
@@ -509,14 +544,17 @@
 
                 if (year === 0) {
                     balanceData.push(initialBalance);
+                    nominalData.push(initialBalance);
                     investedData.push(0);
                 } else {
                     // Calcular 12 meses de aportes e rendimentos com taxa real
                     for (let month = 0; month < 12; month++) {
                         balance = balance * (1 + monthlyRealRate) + monthlyInvestment;
+                        nominalBalance = nominalBalance * (1 + monthlyNominalRate) + monthlyInvestment;
                         totalInvested += monthlyInvestment;
                     }
                     balanceData.push(balance);
+                    nominalData.push(nominalBalance);
                     investedData.push(totalInvested);
                 }
             }
@@ -530,21 +568,28 @@
 
                 // Retirada anual baseada no patrimônio no início do ano
                 const annualWithdrawal = balance * withdrawalRate;
+                const nominalAnnualWithdrawal = nominalBalance * withdrawalRate;
 
                 // Calcular rendimento do ano (já descontando inflação)
                 // e descontar a retirada (distribuída ao longo do ano)
                 const monthlyWithdrawal = annualWithdrawal / 12;
+                const nominalMonthlyWithdrawal = nominalAnnualWithdrawal / 12;
 
                 for (let month = 0; month < 12; month++) {
                     balance = balance * (1 + monthlyRealRate) - monthlyWithdrawal;
+                    nominalBalance = nominalBalance * (1 + monthlyNominalRate) - nominalMonthlyWithdrawal;
                 }
 
                 // Se o saldo ficar negativo, zerar
                 if (balance < 0) {
                     balance = 0;
                 }
+                if (nominalBalance < 0) {
+                    nominalBalance = 0;
+                }
 
                 balanceData.push(balance);
+                nominalData.push(nominalBalance);
                 investedData.push(totalInvested); // Mantém o total investido (não há mais aportes)
             }
 
@@ -587,11 +632,14 @@
             }
 
             // Atualizar gráfico
-            updateChart(labels, balanceData, investedData, retirementAge);
+            // Verificar se deve mostrar patrimônio nominal
+            const showNominal = document.getElementById('showNominal').checked;
+
+            updateChart(labels, balanceData, nominalData, investedData, retirementAge, showNominal);
         }
 
         // Atualizar ou criar gráfico
-        function updateChart(labels, balanceData, investedData, retirementAge) {
+        function updateChart(labels, balanceData, nominalData, investedData, retirementAge, showNominal) {
             const ctx = document.getElementById('investmentChart').getContext('2d');
 
             if (chart) {
@@ -601,35 +649,54 @@
             // Encontrar o índice da idade de aposentadoria
             const retirementIndex = labels.indexOf(retirementAge);
 
+            // Criar datasets
+            const datasets = [
+                {
+                    label: 'Patrimônio Real',
+                    data: balanceData,
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    borderWidth: 3
+                },
+                {
+                    label: 'Total Aportado',
+                    data: investedData,
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                    borderDash: [5, 5]
+                }
+            ];
+
+            // Adicionar patrimônio nominal se checkbox estiver marcado
+            if (showNominal) {
+                datasets.unshift({
+                    label: 'Patrimônio Nominal',
+                    data: nominalData,
+                    borderColor: '#ffa500',
+                    backgroundColor: 'rgba(255, 165, 0, 0.05)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                    borderDash: [3, 3]
+                });
+            }
+
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [
-                        {
-                            label: 'Patrimônio Real',
-                            data: balanceData,
-                            borderColor: '#00d4ff',
-                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 6,
-                            borderWidth: 3
-                        },
-                        {
-                            label: 'Total Aportado',
-                            data: investedData,
-                            borderColor: '#ff6b6b',
-                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 6,
-                            borderWidth: 2,
-                            borderDash: [5, 5]
-                        }
-                    ]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
