@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projeção de Carteira de Investimento</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Área do Gráfico - Lado Esquerdo */
+        .chart-section {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-section h2 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            color: #00d4ff;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            min-height: 400px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .summary-card {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .summary-card.highlight {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        .summary-card.highlight .value {
+            color: #00ff88;
+        }
+
+        /* Painel de Configuração - Lado Direito */
+        .config-section {
+            width: 380px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .config-section h2 {
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+            color: #00d4ff;
+        }
+
+        .config-group {
+            margin-bottom: 28px;
+        }
+
+        .config-group h3 {
+            font-size: 1rem;
+            color: #888;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .form-field {
+            margin-bottom: 16px;
+        }
+
+        .form-field label {
+            display: block;
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        .form-field input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-field input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .form-field input:disabled {
+            background: rgba(255, 255, 255, 0.02);
+            color: #00ff88;
+            border-color: rgba(0, 255, 136, 0.3);
+            cursor: not-allowed;
+        }
+
+        .form-field .input-suffix {
+            position: relative;
+        }
+
+        .form-field .input-suffix input {
+            padding-right: 50px;
+        }
+
+        .form-field .input-suffix::after {
+            content: attr(data-suffix);
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .form-field .input-prefix {
+            position: relative;
+        }
+
+        .form-field .input-prefix input {
+            padding-left: 40px;
+        }
+
+        .form-field .input-prefix::before {
+            content: 'R$';
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .btn-calculate {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .btn-calculate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-calculate:active {
+            transform: translateY(0);
+        }
+
+        /* Responsividade */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .config-section {
+                width: 100%;
+            }
+
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Seção do Gráfico -->
+        <div class="chart-section">
+            <h2>📈 Projeção de Patrimônio</h2>
+            <div class="chart-container">
+                <canvas id="investmentChart"></canvas>
+            </div>
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="label">Total Investido</div>
+                    <div class="value" id="totalInvested">R$ 0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Rendimento Total</div>
+                    <div class="value" id="totalYield">R$ 0</div>
+                </div>
+                <div class="summary-card highlight">
+                    <div class="label">Patrimônio Final</div>
+                    <div class="value" id="finalBalance">R$ 0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de Configuração -->
+        <div class="config-section">
+            <h2>⚙️ Configurações</h2>
+
+            <div class="config-group">
+                <h3>Dados Pessoais</h3>
+
+                <div class="form-field">
+                    <label for="currentAge">Idade Atual</label>
+                    <div class="input-suffix" data-suffix="anos">
+                        <input type="number" id="currentAge" value="25" min="18" max="100">
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="retirementAge">Idade de Aposentadoria</label>
+                    <div class="input-suffix" data-suffix="anos">
+                        <input type="number" id="retirementAge" value="65" min="18" max="100">
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="desiredIncome">Renda Mensal Desejada</label>
+                    <div class="input-prefix">
+                        <input type="number" id="desiredIncome" value="10000" min="0" step="100">
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="monthlyInvestment">Investimento Mensal (Aporte)</label>
+                    <div class="input-prefix">
+                        <input type="number" id="monthlyInvestment" value="1000" min="0" step="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-group">
+                <h3>Configuração de Taxas</h3>
+
+                <div class="form-field">
+                    <label for="inflationRate">Inflação Média Anual</label>
+                    <div class="input-suffix" data-suffix="%">
+                        <input type="number" id="inflationRate" value="6" min="0" max="100" step="0.1">
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="annualReturn">Rentabilidade Anual</label>
+                    <div class="input-suffix" data-suffix="%">
+                        <input type="number" id="annualReturn" value="10" min="0" max="100" step="0.1">
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="realReturn">Rentabilidade Real</label>
+                    <div class="input-suffix" data-suffix="%">
+                        <input type="number" id="realReturn" value="4" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-calculate" onclick="calculateProjection()">
+                Calcular Projeção
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+
+        // Formatar valores em Real brasileiro
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        // Atualizar rentabilidade real quando inflação ou rentabilidade mudam
+        function updateRealReturn() {
+            const inflation = parseFloat(document.getElementById('inflationRate').value) || 0;
+            const annualReturn = parseFloat(document.getElementById('annualReturn').value) || 0;
+            const realReturn = annualReturn - inflation;
+            document.getElementById('realReturn').value = realReturn.toFixed(2);
+        }
+
+        // Calcular projeção de investimento
+        function calculateProjection() {
+            const currentAge = parseInt(document.getElementById('currentAge').value) || 25;
+            const retirementAge = parseInt(document.getElementById('retirementAge').value) || 65;
+            const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value) || 0;
+            const annualReturn = parseFloat(document.getElementById('annualReturn').value) / 100 || 0;
+            const inflation = parseFloat(document.getElementById('inflationRate').value) / 100 || 0;
+
+            const years = retirementAge - currentAge;
+            if (years <= 0) {
+                alert('A idade de aposentadoria deve ser maior que a idade atual!');
+                return;
+            }
+
+            const monthlyRate = annualReturn / 12;
+            const realRate = annualReturn - inflation;
+
+            const labels = [];
+            const balanceData = [];
+            const investedData = [];
+
+            let balance = 0;
+            let totalInvested = 0;
+
+            for (let year = 0; year <= years; year++) {
+                labels.push(currentAge + year);
+
+                if (year === 0) {
+                    balanceData.push(0);
+                    investedData.push(0);
+                } else {
+                    // Calcular 12 meses de aportes e rendimentos
+                    for (let month = 0; month < 12; month++) {
+                        balance = balance * (1 + monthlyRate) + monthlyInvestment;
+                        totalInvested += monthlyInvestment;
+                    }
+                    balanceData.push(balance);
+                    investedData.push(totalInvested);
+                }
+            }
+
+            const totalYield = balance - totalInvested;
+
+            // Atualizar cards de resumo
+            document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
+            document.getElementById('totalYield').textContent = formatCurrency(totalYield);
+            document.getElementById('finalBalance').textContent = formatCurrency(balance);
+
+            // Atualizar gráfico
+            updateChart(labels, balanceData, investedData);
+        }
+
+        // Atualizar ou criar gráfico
+        function updateChart(labels, balanceData, investedData) {
+            const ctx = document.getElementById('investmentChart').getContext('2d');
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Patrimônio Total',
+                            data: balanceData,
+                            borderColor: '#00d4ff',
+                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            borderWidth: 3
+                        },
+                        {
+                            label: 'Total Investido',
+                            data: investedData,
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            borderWidth: 2,
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#fff',
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                title: function(context) {
+                                    return `Idade: ${context[0].label} anos`;
+                                },
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Idade',
+                                color: '#888'
+                            },
+                            ticks: {
+                                color: '#888'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Valor (R$)',
+                                color: '#888'
+                            },
+                            ticks: {
+                                color: '#888',
+                                callback: function(value) {
+                                    if (value >= 1000000) {
+                                        return 'R$ ' + (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return 'R$ ' + (value / 1000).toFixed(0) + 'k';
+                                    }
+                                    return 'R$ ' + value;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event listeners para atualização automática
+        document.getElementById('inflationRate').addEventListener('input', updateRealReturn);
+        document.getElementById('annualReturn').addEventListener('input', updateRealReturn);
+
+        // Auto-calcular quando qualquer campo mudar
+        const inputs = document.querySelectorAll('input:not([disabled])');
+        inputs.forEach(input => {
+            input.addEventListener('change', calculateProjection);
+        });
+
+        // Inicializar
+        updateRealReturn();
+        calculateProjection();
+    </script>
+</body>
+</html>
