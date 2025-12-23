@@ -85,6 +85,28 @@
             color: #00ff88;
         }
 
+        .summary-card .comparison {
+            font-size: 0.75rem;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .summary-card .comparison.success {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+
+        .summary-card .comparison.warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .summary-card .comparison.danger {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
         /* Painel de Configuração - Lado Direito */
         .config-section {
             width: 380px;
@@ -235,9 +257,10 @@
                     <div class="label" id="labelTotalInvested">Total Investido aos 65 anos</div>
                     <div class="value" id="totalInvested">R$ 0</div>
                 </div>
-                <div class="summary-card">
-                    <div class="label" id="labelTotalYield">Rendimento Total aos 65 anos</div>
-                    <div class="value" id="totalYield">R$ 0</div>
+                <div class="summary-card" id="cardWithdrawal">
+                    <div class="label">Retirada Mensal após Aposentadoria</div>
+                    <div class="value" id="monthlyWithdrawal">R$ 0</div>
+                    <div class="comparison" id="incomeComparison"></div>
                 </div>
                 <div class="summary-card highlight">
                     <div class="label" id="labelFinalBalance">Patrimônio Final aos 65 anos</div>
@@ -256,28 +279,28 @@
                 <div class="form-field">
                     <label for="currentAge">Idade Atual</label>
                     <div class="input-suffix" data-suffix="anos">
-                        <input type="number" id="currentAge" value="25" min="18" max="100">
+                        <input type="number" id="currentAge" value="36" min="18" max="100">
                     </div>
                 </div>
 
                 <div class="form-field">
                     <label for="retirementAge">Idade de Aposentadoria</label>
                     <div class="input-suffix" data-suffix="anos">
-                        <input type="number" id="retirementAge" value="65" min="18" max="100">
+                        <input type="number" id="retirementAge" value="60" min="18" max="100">
                     </div>
                 </div>
 
                 <div class="form-field">
                     <label for="desiredIncome">Renda Mensal Desejada</label>
                     <div class="input-prefix">
-                        <input type="number" id="desiredIncome" value="10000" min="0" step="100">
+                        <input type="number" id="desiredIncome" value="18000" min="0" step="100">
                     </div>
                 </div>
 
                 <div class="form-field">
                     <label for="monthlyInvestment">Investimento Mensal (Aporte)</label>
                     <div class="input-prefix">
-                        <input type="number" id="monthlyInvestment" value="1000" min="0" step="100">
+                        <input type="number" id="monthlyInvestment" value="5000" min="0" step="100">
                     </div>
                 </div>
             </div>
@@ -295,7 +318,7 @@
                 <div class="form-field">
                     <label for="annualReturn">Rentabilidade Anual</label>
                     <div class="input-suffix" data-suffix="%">
-                        <input type="number" id="annualReturn" value="10" min="0" max="100" step="0.1">
+                        <input type="number" id="annualReturn" value="12" min="0" max="100" step="0.1">
                     </div>
                 </div>
 
@@ -313,7 +336,7 @@
                 <div class="form-field">
                     <label for="withdrawalRate">Taxa de Retirada Anual</label>
                     <div class="input-suffix" data-suffix="%">
-                        <input type="number" id="withdrawalRate" value="4" min="0" max="100" step="0.1">
+                        <input type="number" id="withdrawalRate" value="5" min="0" max="100" step="0.1">
                     </div>
                 </div>
             </div>
@@ -420,18 +443,43 @@
                 investedData.push(totalInvested); // Mantém o total investido (não há mais aportes)
             }
 
-            // Calcular rendimento total na aposentadoria
-            const totalYield = balanceAtRetirement - totalInvested;
+            // Calcular retirada mensal após aposentadoria
+            const annualWithdrawalAmount = balanceAtRetirement * withdrawalRate;
+            const monthlyWithdrawalAmount = annualWithdrawalAmount / 12;
+
+            // Obter renda mensal desejada
+            const desiredIncome = parseFloat(document.getElementById('desiredIncome').value) || 0;
 
             // Atualizar labels dos cards com a idade de aposentadoria
             document.getElementById('labelTotalInvested').textContent = `Total Investido aos ${retirementAge} anos`;
-            document.getElementById('labelTotalYield').textContent = `Rendimento Total aos ${retirementAge} anos`;
             document.getElementById('labelFinalBalance').textContent = `Patrimônio Final aos ${retirementAge} anos`;
 
             // Atualizar valores dos cards
             document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
-            document.getElementById('totalYield').textContent = formatCurrency(totalYield);
+            document.getElementById('monthlyWithdrawal').textContent = formatCurrency(monthlyWithdrawalAmount);
             document.getElementById('finalBalance').textContent = formatCurrency(balanceAtRetirement);
+
+            // Comparar com renda desejada
+            const comparisonEl = document.getElementById('incomeComparison');
+            const cardWithdrawal = document.getElementById('cardWithdrawal');
+            const diff = monthlyWithdrawalAmount - desiredIncome;
+            const percentDiff = ((monthlyWithdrawalAmount / desiredIncome) * 100).toFixed(0);
+
+            // Remover classes anteriores
+            comparisonEl.classList.remove('success', 'warning', 'danger');
+            cardWithdrawal.classList.remove('highlight');
+
+            if (monthlyWithdrawalAmount >= desiredIncome) {
+                comparisonEl.classList.add('success');
+                cardWithdrawal.classList.add('highlight');
+                comparisonEl.textContent = `${percentDiff}% da renda desejada (+${formatCurrency(diff)})`;
+            } else if (percentDiff >= 80) {
+                comparisonEl.classList.add('warning');
+                comparisonEl.textContent = `${percentDiff}% da renda desejada (${formatCurrency(diff)})`;
+            } else {
+                comparisonEl.classList.add('danger');
+                comparisonEl.textContent = `${percentDiff}% da renda desejada (${formatCurrency(diff)})`;
+            }
 
             // Atualizar gráfico
             updateChart(labels, balanceData, investedData, retirementAge);
