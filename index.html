@@ -416,7 +416,7 @@
                 <div class="form-field">
                     <label for="retirementAge">Idade de Aposentadoria</label>
                     <div class="input-suffix" data-suffix="anos">
-                        <input type="number" id="retirementAge" value="60" min="18" max="100">
+                        <input type="number" id="retirementAge" value="60" min="18" max="80">
                     </div>
                 </div>
 
@@ -578,7 +578,16 @@
                 return;
             }
 
-            const finalAge = 100;
+            if (retirementAge > 80) {
+                alert('A idade de aposentadoria não pode ser maior que 80 anos!');
+                return;
+            }
+
+            // Verificar se deve mostrar patrimônio nominal
+            const showNominal = document.getElementById('showNominal').checked;
+
+            // Se mostrar nominal, limitar a aposentadoria + 20 anos
+            const finalAge = showNominal ? retirementAge + 20 : 100;
             const totalYears = finalAge - currentAge;
 
             // Usar rentabilidade REAL (já descontando inflação)
@@ -690,9 +699,6 @@
             }
 
             // Atualizar gráfico
-            // Verificar se deve mostrar patrimônio nominal
-            const showNominal = document.getElementById('showNominal').checked;
-
             updateChart(labels, balanceData, nominalData, investedData, retirementAge, showNominal);
         }
 
