@@ -228,6 +228,42 @@
             transform: translateY(0);
         }
 
+        .config-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .config-header h2 {
+            margin-bottom: 0;
+        }
+
+        .btn-save-icon {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid rgba(0, 255, 136, 0.4);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .btn-save-icon:hover {
+            background: rgba(0, 255, 136, 0.3);
+            transform: scale(1.05);
+        }
+
+        .saved-info {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .saved-info.visible {
+            color: #00ff88;
+        }
+
         /* Responsividade */
         @media (max-width: 1024px) {
             .container {
@@ -249,6 +285,7 @@
         <!-- Seção do Gráfico -->
         <div class="chart-section">
             <h2>📈 Projeção de Patrimônio Real (descontando inflação)</h2>
+            <div class="saved-info" id="savedInfo"></div>
             <div class="chart-container">
                 <canvas id="investmentChart"></canvas>
             </div>
@@ -271,7 +308,10 @@
 
         <!-- Painel de Configuração -->
         <div class="config-section">
-            <h2>⚙️ Configurações</h2>
+            <div class="config-header">
+                <h2>⚙️ Configurações</h2>
+                <button class="btn-save-icon" onclick="saveConfig()" title="Salvar configuração">💾</button>
+            </div>
 
             <div class="config-group">
                 <h3>Dados Pessoais</h3>
@@ -341,14 +381,69 @@
                 </div>
             </div>
 
-            <button class="btn-calculate" onclick="calculateProjection()">
-                Calcular Projeção
+            <button class="btn-calculate" onclick="saveConfig()">
+                💾 Calcular e Salvar
             </button>
         </div>
     </div>
 
     <script>
         let chart = null;
+        const STORAGE_KEY = 'investmentProjectionConfig';
+
+        // Formatar data no formato brasileiro
+        function formatDate(date) {
+            const d = new Date(date);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        }
+
+        // Salvar configuração no localStorage
+        function saveConfig() {
+            const config = {
+                currentAge: document.getElementById('currentAge').value,
+                retirementAge: document.getElementById('retirementAge').value,
+                desiredIncome: document.getElementById('desiredIncome').value,
+                monthlyInvestment: document.getElementById('monthlyInvestment').value,
+                inflationRate: document.getElementById('inflationRate').value,
+                annualReturn: document.getElementById('annualReturn').value,
+                withdrawalRate: document.getElementById('withdrawalRate').value,
+                savedAt: new Date().toISOString()
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+            updateSavedInfo(config.savedAt);
+            calculateProjection();
+        }
+
+        // Carregar configuração do localStorage
+        function loadConfig() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const config = JSON.parse(saved);
+                document.getElementById('currentAge').value = config.currentAge;
+                document.getElementById('retirementAge').value = config.retirementAge;
+                document.getElementById('desiredIncome').value = config.desiredIncome;
+                document.getElementById('monthlyInvestment').value = config.monthlyInvestment;
+                document.getElementById('inflationRate').value = config.inflationRate;
+                document.getElementById('annualReturn').value = config.annualReturn;
+                document.getElementById('withdrawalRate').value = config.withdrawalRate;
+                updateSavedInfo(config.savedAt);
+                return true;
+            }
+            return false;
+        }
+
+        // Atualizar informação de quando foi salvo
+        function updateSavedInfo(savedAt) {
+            const el = document.getElementById('savedInfo');
+            el.textContent = `Configuração salva em ${formatDate(savedAt)}`;
+            el.classList.add('visible');
+        }
 
         // Formatar valores em Real brasileiro
         function formatCurrency(value) {
@@ -637,6 +732,7 @@
         });
 
         // Inicializar
+        loadConfig(); // Carrega configuração salva se existir
         updateRealReturn();
         calculateProjection();
     </script>
