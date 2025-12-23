@@ -232,16 +232,16 @@
             </div>
             <div class="summary-cards">
                 <div class="summary-card">
-                    <div class="label">Total Investido</div>
+                    <div class="label" id="labelTotalInvested">Total Investido aos 65 anos</div>
                     <div class="value" id="totalInvested">R$ 0</div>
                 </div>
-                <div class="summary-card highlight">
-                    <div class="label">Patrimônio na Aposentadoria</div>
-                    <div class="value" id="finalBalance">R$ 0</div>
-                </div>
                 <div class="summary-card">
-                    <div class="label">Patrimônio aos 100 anos</div>
-                    <div class="value" id="balanceAt100">R$ 0</div>
+                    <div class="label" id="labelTotalYield">Rendimento Total aos 65 anos</div>
+                    <div class="value" id="totalYield">R$ 0</div>
+                </div>
+                <div class="summary-card highlight">
+                    <div class="label" id="labelFinalBalance">Patrimônio Final aos 65 anos</div>
+                    <div class="value" id="finalBalance">R$ 0</div>
                 </div>
             </div>
         </div>
@@ -420,10 +420,18 @@
                 investedData.push(totalInvested); // Mantém o total investido (não há mais aportes)
             }
 
-            // Atualizar cards de resumo
+            // Calcular rendimento total na aposentadoria
+            const totalYield = balanceAtRetirement - totalInvested;
+
+            // Atualizar labels dos cards com a idade de aposentadoria
+            document.getElementById('labelTotalInvested').textContent = `Total Investido aos ${retirementAge} anos`;
+            document.getElementById('labelTotalYield').textContent = `Rendimento Total aos ${retirementAge} anos`;
+            document.getElementById('labelFinalBalance').textContent = `Patrimônio Final aos ${retirementAge} anos`;
+
+            // Atualizar valores dos cards
             document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
+            document.getElementById('totalYield').textContent = formatCurrency(totalYield);
             document.getElementById('finalBalance').textContent = formatCurrency(balanceAtRetirement);
-            document.getElementById('balanceAt100').textContent = formatCurrency(balance);
 
             // Atualizar gráfico
             updateChart(labels, balanceData, investedData, retirementAge);
