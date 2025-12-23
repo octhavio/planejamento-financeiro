@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projeção de Carteira de Investimento</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <style>
         * {
             margin: 0;
@@ -225,7 +226,7 @@
     <div class="container">
         <!-- Seção do Gráfico -->
         <div class="chart-section">
-            <h2>📈 Projeção de Patrimônio</h2>
+            <h2>📈 Projeção de Patrimônio Real (descontando inflação)</h2>
             <div class="chart-container">
                 <canvas id="investmentChart"></canvas>
             </div>
@@ -234,13 +235,13 @@
                     <div class="label">Total Investido</div>
                     <div class="value" id="totalInvested">R$ 0</div>
                 </div>
-                <div class="summary-card">
-                    <div class="label">Rendimento Total</div>
-                    <div class="value" id="totalYield">R$ 0</div>
-                </div>
                 <div class="summary-card highlight">
-                    <div class="label">Patrimônio Final</div>
+                    <div class="label">Patrimônio na Aposentadoria</div>
                     <div class="value" id="finalBalance">R$ 0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Patrimônio aos 100 anos</div>
+                    <div class="value" id="balanceAt100">R$ 0</div>
                 </div>
             </div>
         </div>
@@ -306,6 +307,17 @@
                 </div>
             </div>
 
+            <div class="config-group">
+                <h3>Aposentadoria</h3>
+
+                <div class="form-field">
+                    <label for="withdrawalRate">Taxa de Retirada Anual</label>
+                    <div class="input-suffix" data-suffix="%">
+                        <input type="number" id="withdrawalRate" value="4" min="0" max="100" step="0.1">
+                    </div>
+                </div>
+            </div>
+
             <button class="btn-calculate" onclick="calculateProjection()">
                 Calcular Projeção
             </button>
@@ -340,15 +352,20 @@
             const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value) || 0;
             const annualReturn = parseFloat(document.getElementById('annualReturn').value) / 100 || 0;
             const inflation = parseFloat(document.getElementById('inflationRate').value) / 100 || 0;
+            const withdrawalRate = parseFloat(document.getElementById('withdrawalRate').value) / 100 || 0;
 
-            const years = retirementAge - currentAge;
-            if (years <= 0) {
+            const yearsToRetirement = retirementAge - currentAge;
+            if (yearsToRetirement <= 0) {
                 alert('A idade de aposentadoria deve ser maior que a idade atual!');
                 return;
             }
 
-            const monthlyRate = annualReturn / 12;
+            const finalAge = 100;
+            const totalYears = finalAge - currentAge;
+
+            // Usar rentabilidade REAL (já descontando inflação)
             const realRate = annualReturn - inflation;
+            const monthlyRealRate = realRate / 12;
 
             const labels = [];
             const balanceData = [];
@@ -356,17 +373,19 @@
 
             let balance = 0;
             let totalInvested = 0;
+            let balanceAtRetirement = 0;
 
-            for (let year = 0; year <= years; year++) {
+            // Fase de acumulação (até aposentadoria)
+            for (let year = 0; year <= yearsToRetirement; year++) {
                 labels.push(currentAge + year);
 
                 if (year === 0) {
                     balanceData.push(0);
                     investedData.push(0);
                 } else {
-                    // Calcular 12 meses de aportes e rendimentos
+                    // Calcular 12 meses de aportes e rendimentos com taxa real
                     for (let month = 0; month < 12; month++) {
-                        balance = balance * (1 + monthlyRate) + monthlyInvestment;
+                        balance = balance * (1 + monthlyRealRate) + monthlyInvestment;
                         totalInvested += monthlyInvestment;
                     }
                     balanceData.push(balance);
@@ -374,24 +393,52 @@
                 }
             }
 
-            const totalYield = balance - totalInvested;
+            balanceAtRetirement = balance;
+
+            // Fase de aposentadoria (após aposentadoria até 100 anos)
+            // Sem novos aportes, com retiradas anuais baseadas na taxa configurada
+            for (let year = yearsToRetirement + 1; year <= totalYears; year++) {
+                labels.push(currentAge + year);
+
+                // Retirada anual baseada no patrimônio no início do ano
+                const annualWithdrawal = balance * withdrawalRate;
+
+                // Calcular rendimento do ano (já descontando inflação)
+                // e descontar a retirada (distribuída ao longo do ano)
+                const monthlyWithdrawal = annualWithdrawal / 12;
+
+                for (let month = 0; month < 12; month++) {
+                    balance = balance * (1 + monthlyRealRate) - monthlyWithdrawal;
+                }
+
+                // Se o saldo ficar negativo, zerar
+                if (balance < 0) {
+                    balance = 0;
+                }
+
+                balanceData.push(balance);
+                investedData.push(totalInvested); // Mantém o total investido (não há mais aportes)
+            }
 
             // Atualizar cards de resumo
             document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
-            document.getElementById('totalYield').textContent = formatCurrency(totalYield);
-            document.getElementById('finalBalance').textContent = formatCurrency(balance);
+            document.getElementById('finalBalance').textContent = formatCurrency(balanceAtRetirement);
+            document.getElementById('balanceAt100').textContent = formatCurrency(balance);
 
             // Atualizar gráfico
-            updateChart(labels, balanceData, investedData);
+            updateChart(labels, balanceData, investedData, retirementAge);
         }
 
         // Atualizar ou criar gráfico
-        function updateChart(labels, balanceData, investedData) {
+        function updateChart(labels, balanceData, investedData, retirementAge) {
             const ctx = document.getElementById('investmentChart').getContext('2d');
 
             if (chart) {
                 chart.destroy();
             }
+
+            // Encontrar o índice da idade de aposentadoria
+            const retirementIndex = labels.indexOf(retirementAge);
 
             chart = new Chart(ctx, {
                 type: 'line',
@@ -399,7 +446,7 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: 'Patrimônio Total',
+                            label: 'Patrimônio Real',
                             data: balanceData,
                             borderColor: '#00d4ff',
                             backgroundColor: 'rgba(0, 212, 255, 0.1)',
@@ -450,10 +497,34 @@
                             displayColors: true,
                             callbacks: {
                                 title: function(context) {
-                                    return `Idade: ${context[0].label} anos`;
+                                    const age = context[0].label;
+                                    const phase = age < retirementAge ? 'Acumulação' : 'Aposentadoria';
+                                    return `Idade: ${age} anos (${phase})`;
                                 },
                                 label: function(context) {
                                     return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                retirementLine: {
+                                    type: 'line',
+                                    xMin: retirementIndex,
+                                    xMax: retirementIndex,
+                                    borderColor: '#ffd700',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'Aposentadoria',
+                                        position: 'start',
+                                        backgroundColor: 'rgba(255, 215, 0, 0.8)',
+                                        color: '#000',
+                                        font: {
+                                            size: 11
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -466,7 +537,8 @@
                                 color: '#888'
                             },
                             ticks: {
-                                color: '#888'
+                                color: '#888',
+                                maxTicksLimit: 15
                             },
                             grid: {
                                 color: 'rgba(255, 255, 255, 0.05)'
@@ -475,7 +547,7 @@
                         y: {
                             title: {
                                 display: true,
-                                text: 'Valor (R$)',
+                                text: 'Valor Real (R$)',
                                 color: '#888'
                             },
                             ticks: {
