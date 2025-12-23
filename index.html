@@ -38,9 +38,24 @@
         }
 
         .chart-section h2 {
-            margin-bottom: 20px;
+            margin-bottom: 0;
             font-size: 1.5rem;
             color: #00d4ff;
+        }
+
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .chart-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .chart-container {
@@ -264,30 +279,68 @@
             color: #00ff88;
         }
 
-        .chart-options {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
-        }
-
-        .chart-option {
+        /* Toggle Switch */
+        .toggle-container {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
+            gap: 10px;
+        }
+
+        .toggle-label {
+            font-size: 0.9rem;
             color: #888;
-            cursor: pointer;
+            white-space: nowrap;
         }
 
-        .chart-option input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #ffa500;
-            cursor: pointer;
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
         }
 
-        .chart-option:hover {
-            color: #ccc;
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #888;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: rgba(255, 165, 0, 0.3);
+            border-color: #ffa500;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+            background-color: #ffa500;
+        }
+
+        .toggle-switch input:focus + .toggle-slider {
+            box-shadow: 0 0 4px rgba(255, 165, 0, 0.5);
         }
 
         /* Responsividade */
@@ -310,13 +363,18 @@
     <div class="container">
         <!-- Seção do Gráfico -->
         <div class="chart-section">
-            <h2>📈 Projeção de Patrimônio Real (descontando inflação)</h2>
-            <div class="saved-info" id="savedInfo"></div>
-            <div class="chart-options">
-                <label class="chart-option">
-                    <input type="checkbox" id="showNominal" onchange="calculateProjection()">
-                    Mostrar Patrimônio Nominal
-                </label>
+            <div class="chart-header">
+                <div class="chart-header-left">
+                    <h2>📈 Projeção de Patrimônio Real (descontando inflação)</h2>
+                    <div class="saved-info" id="savedInfo"></div>
+                </div>
+                <div class="toggle-container">
+                    <span class="toggle-label">Patrimônio Nominal</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showNominal" onchange="calculateProjection()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
             <div class="chart-container">
                 <canvas id="investmentChart"></canvas>
